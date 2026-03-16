@@ -1,12 +1,15 @@
-#ifndef SIGNAL_H
-#define SIGNAL_H
+#include "signal.h"
 
-#include <semaphore.h>
+sem_t signalSemaphore;  // actual definition
 
-extern sem_t signalSemaphore;  // Added this line
+void initializeSignals() {
+    sem_init(&signalSemaphore, 0, 2);
+}
 
-void initializeSignals();
-void requestSignal();
-void releaseSignal();
+void requestSignal() {
+    sem_wait(&signalSemaphore);
+}
 
-#endif
+void releaseSignal() {
+    sem_post(&signalSemaphore);
+}
