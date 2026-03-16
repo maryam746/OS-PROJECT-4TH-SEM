@@ -3,6 +3,8 @@
 
 #include <semaphore.h>
 
+extern sem_t signalSemaphore;  // Added this line
+
 void initializeSignals();
 void requestSignal();
 void releaseSignal();
