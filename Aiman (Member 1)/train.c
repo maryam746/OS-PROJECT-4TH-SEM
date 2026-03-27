@@ -3,150 +3,148 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <time.h>
+#include <string.h>
 #include "signal.h"
-#include "routing.h"
+#include "track.h"
 #include "train.h"
 
-// ANSI color codes for trains
-const char* colors[] = {"\x1b[31m","\x1b[32m","\x1b[33m","\x1b[34m","\x1b[35m"};
-#define RESET "\x1b[0m"
+// Global variables
+Train* global_trains = NULL;
+int global_train_count = 0;
+FILE* log_file = NULL;
+volatile int simulation_running = 1;
 
-// Thread-safe printing
+long global_arrival_counter = 0;
+pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-// Track occupancy: 0 = free, train_id = occupied
 int track_status[TOTAL_TRACKS] = {0};
 
-// Track utilization counter (extern declared in train.h)
-int track_utilization[TOTAL_TRACKS] = {0};
 
-// Priority train management
-int waiting_express = 0;
-pthread_mutex_t priority_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-// Convert train state to string
-const char* stateToString(TrainState s){
-    switch(s){
-        case WAITING_SIGNAL: return "Waiting for signal";
-        case WAITING_TRACK: return "Waiting for track";
-        case MOVING: return "Moving";
-        case FINISHED: return "Finished";
-        default: return "Unknown";
-    }
-}
-
-// Display track occupancy
-void displayTracks()
-{
-    pthread_mutex_lock(&print_mutex);
-    printf("\nTRACK STATUS\n");
-    for(int i=0;i<TOTAL_TRACKS;i++){
-        if(track_status[i]==0)
-            printf("Track %d : Free | Used %d times\n", i, track_utilization[i]);
-        else
-            printf("Track %d : Train %d | Used %d times\n", i, track_status[i], track_utilization[i]);
-    }
-    printf("\n");
-    pthread_mutex_unlock(&print_mutex);
-}
-
-// Thread-safe logging with timestamp
-void log_train(const char* msg, Train* t)
-{
+void log_train(const char* msg, Train* t) {
     pthread_mutex_lock(&print_mutex);
     time_t now = time(NULL);
     char buf[20];
     strftime(buf, sizeof(buf), "%H:%M:%S", localtime(&now));
-
-    printf("[%s]%sTrain %d [%s]: %s%s\n",
-           buf,
-           colors[t->color_index % 5],
-           t->id,
-           (t->priority==1)?"Express":"Normal",
-           msg,
-           RESET);
+    printf("[%s] Train %d Loop %d: %s\n", buf, t->id, t->loop_count + 1, msg);
+    if(log_file) {
+        fprintf(log_file, "[%s] Train %d: %s\n", buf, t->id, msg);
+        fflush(log_file);
+    }
     pthread_mutex_unlock(&print_mutex);
 }
 
-// Train thread function
-void* train(void* arg)
-{
+// Deadlock Prevention: Lock all tracks in the path in ascending order
+void lock_route(int start, int end) {
+    int low = (start < end) ? start : end;
+    int high = (start > end) ? start : end;
+    for (int i = low - 1; i <= high - 1; i++) {
+        pthread_mutex_lock(&tracks[i].mutex);
+    }
+}
+
+void unlock_route(int start, int end) {
+    int low = (start < end) ? start : end;
+    int high = (start > end) ? start : end;
+    for (int i = low - 1; i <= high - 1; i++) {
+        pthread_mutex_unlock(&tracks[i].mutex);
+    }
+}
+
+// Check if ANY track in the intended path is currently occupied
+int is_path_blocked(int start, int end) {
+    int low = (start < end) ? start : end;
+    int high = (start > end) ? start : end;
+    for (int i = low - 1; i <= high - 1; i++) {
+        if (track_status[i] != 0) return 1;
+    }
+    return 0;
+}
+
+void* train(void* arg) {
     Train* t = (Train*)arg;
+    t->track1 = t->id;
+    
+    while(t->loop_count < t->max_loops && simulation_running) {
+        t->reached_bottom = 0;
+        
+        // 1. Assign destination
+        int direction = (rand() % 2 == 0) ? 1 : -1;
+        int max_jump = 1 + (rand() % 2); 
+        t->track2 = t->track1 + (direction * max_jump);
+        if(t->track2 < 1) t->track2 = 1;
+        if(t->track2 > TOTAL_TRACKS) t->track2 = TOTAL_TRACKS;
+        if(t->track1 == t->track2) t->track2 = (t->track1 == TOTAL_TRACKS) ? t->track1 - 1 : t->track1 + 1;
 
-    // Wait until scheduled departure
-    sleep(t->departure_time);
+        snprintf(t->current_route_str, sizeof(t->current_route_str), "T%d -> T%d", t->track1, t->track2);
+        
+        t->state = WAITING_SIGNAL;
+        pthread_mutex_lock(&queue_mutex);
+        t->arrival_time = global_arrival_counter++;
+        pthread_mutex_unlock(&queue_mutex);
 
-    t->arrival_time = time(NULL);
-    t->state = WAITING_SIGNAL;
-    log_train("Departed station (scheduled)", t);
+        // Pre-departure delay
+        sleep(t->loop_count == 0 ? t->departure_time : 2);
+        
+        // 2. The "Anti-Starvation" Loop
+        int has_resources = 0;
+        while(!has_resources && simulation_running) {
+            // Check if it's my turn in the FIFO queue
+            pthread_mutex_lock(&queue_mutex);
+            Train* oldest = NULL;
+            long oldest_time = __LONG_MAX__;
+            for(int i = 0; i < global_train_count; i++) {
+                if((global_trains[i].state == WAITING_SIGNAL || global_trains[i].state == WAITING_TRACK) 
+                   && global_trains[i].arrival_time < oldest_time) {
+                    oldest_time = global_trains[i].arrival_time;
+                    oldest = &global_trains[i];
+                }
+            }
+            
+            if(oldest != NULL && oldest->id == t->id) {
+                // It is my turn! Now check if the tracks are actually clear.
+                pthread_mutex_lock(&print_mutex);
+                if (!is_path_blocked(t->track1, t->track2)) {
+                    // PATH IS CLEAR: Claim it immediately
+                    track_status[t->track1-1] = t->id;
+                    track_status[t->track2-1] = t->id;
+                    has_resources = 1;
+                    t->state = WAITING_TRACK;
+                }
+                pthread_mutex_unlock(&print_mutex);
+            }
+            pthread_mutex_unlock(&queue_mutex);
 
-    // Random route assignment
-    t->track1 = rand() % TOTAL_TRACKS;
-    do { t->track2 = rand() % TOTAL_TRACKS; } while(t->track2 == t->track1);
-    log_train("Route assigned", t);
-
-    // Express priority at signal
-    if(t->priority == 1){
-        pthread_mutex_lock(&priority_mutex);
-        waiting_express++;
-        pthread_mutex_unlock(&priority_mutex);
-    }
-
-    log_train("Waiting for signal", t);
-    int acquired = 0;
-    while(!acquired){
-        pthread_mutex_lock(&priority_mutex);
-        if(t->priority==1 || waiting_express==0){
-            sem_wait(&signalSemaphore); // signal acquisition
-            acquired = 1;
+            if(!has_resources) usleep(100000); // Wait and try again
         }
-        pthread_mutex_unlock(&priority_mutex);
-        if(!acquired) sleep(1);
+
+        if(!simulation_running) break;
+
+        // 3. Acquire Physical Locks and Move
+        requestSignal();
+        lock_route(t->track1, t->track2);
+        
+        t->state = MOVING;
+        log_train("Departing", t);
+
+        // Wait for GUI to signal completion
+        while(!t->reached_bottom && simulation_running) {
+            usleep(50000);
+        }
+
+        // 4. Release everything
+        pthread_mutex_lock(&print_mutex);
+        track_status[t->track1-1] = 0;
+        track_status[t->track2-1] = 0;
+        pthread_mutex_unlock(&print_mutex);
+
+        unlock_route(t->track1, t->track2);
+        releaseSignal();
+
+        t->track1 = t->track2;
+        t->loop_count++;
+        log_train("Arrived", t);
     }
-
-    if(t->priority==1){
-        pthread_mutex_lock(&priority_mutex);
-        waiting_express--;
-        pthread_mutex_unlock(&priority_mutex);
-    }
-
-    t->signal_acquired_time = time(NULL);
-
-    // Track acquisition
-    t->state = WAITING_TRACK;
-    char msg[50];
-    snprintf(msg,sizeof(msg),"Requesting tracks %d and %d",t->track1,t->track2);
-    log_train(msg,t);
-
-    acquireTracks(t->track1,t->track2);
-    t->track_acquired_time = time(NULL);
-
-    // Occupy tracks & increment utilization
-    track_status[t->track1] = t->id;
-    track_status[t->track2] = t->id;
-    track_utilization[t->track1]++;
-    track_utilization[t->track2]++;
-    displayTracks();
-
-    // Move train
-    t->state = MOVING;
-    int travel_time = rand()%3 + 1;
-    snprintf(msg,sizeof(msg),"Moving for %d seconds", travel_time);
-    log_train(msg,t);
-    sleep(travel_time);
-
-    // Release tracks
-    log_train("Leaving tracks",t);
-    track_status[t->track1]=0;
-    track_status[t->track2]=0;
-    displayTracks();
-
-    releaseTracks(t->track1,t->track2);
-    releaseSignal();
 
     t->state = FINISHED;
-    t->finish_time = time(NULL);
-    log_train("Finished route",t);
-
     return NULL;
 }
