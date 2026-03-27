@@ -3,14 +3,14 @@
 
 #include <pthread.h>
 
-#define NUM_TRACKS 5
+#define TOTAL_TRACKS 5
 
 typedef struct {
     int id;
     pthread_mutex_t mutex;
 } TrackSegment;
 
-extern TrackSegment tracks[NUM_TRACKS];
+extern TrackSegment tracks[TOTAL_TRACKS];
 
 void initializeTracks();
 
