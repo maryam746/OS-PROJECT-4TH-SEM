@@ -1,9 +1,9 @@
 #include "signal.h"
 
-sem_t signalSemaphore;  // actual definition
+sem_t signalSemaphore;
 
 void initializeSignals() {
-    sem_init(&signalSemaphore, 0, 2);
+    sem_init(&signalSemaphore, 0, 4);
 }
 
 void requestSignal() {
