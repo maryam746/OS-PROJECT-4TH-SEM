@@ -1,9 +1,10 @@
 #ifndef TRAIN_H
 #define TRAIN_H
-
+#include "track.h"
 #include <time.h>
+#include <stdio.h>
 
-#define TOTAL_TRACKS 5
+extern int track_status[TOTAL_TRACKS];
 
 typedef enum {
     WAITING_SIGNAL,
@@ -14,25 +15,25 @@ typedef enum {
 
 typedef struct {
     int id;
-    int track1;
-    int track2;
+    int track1;          // Current track (1-5)
+    int track2;          // Destination track (1-5)
     int color_index;
     TrainState state;
-
-    int priority;          // 0 = normal, 1 = express
-    int departure_time;    // scheduled departure (seconds from start)
-
-    // Timestamp fields for analytics
+    int departure_time;
+    int loop_count;
+    int max_loops;
     time_t arrival_time;
-    time_t signal_acquired_time;
-    time_t track_acquired_time;
     time_t finish_time;
-
+    char current_route_str[64];  // Route description for GUI
+    volatile int reached_bottom;
 } Train;
 
 void* train(void* arg);
 
-// Make track utilization accessible to main.c
-extern int track_utilization[TOTAL_TRACKS];
+// Global variables
+extern Train* global_trains;
+extern int global_train_count;
+extern FILE* log_file;
+extern volatile int simulation_running;
 
 #endif
