@@ -16,27 +16,27 @@ extern volatile int simulation_running;
 
 // Define global GUI variables
 TrackData track_positions[TOTAL_TRACKS] = {
-    {150, 50, 700, 1},   // Track 1
-    {350, 50, 700, 2},   // Track 2
-    {550, 50, 700, 3},   // Track 3
-    {750, 50, 700, 4},   // Track 4
-    {950, 50, 700, 5}    // Track 5
+    {300, 120, 720, 1},   // Track 1 (y_start: 120, y_end: 720, height: 600px)
+    {520, 120, 720, 2},   // Track 2
+    {740, 120, 720, 3},   // Track 3
+    {960, 120, 720, 4},   // Track 4
+    {1180, 120, 720, 5}   // Track 5
 };
 
 Junction junctions[TOTAL_JUNCTIONS] = {
     // Lower junctions (closer to start)
-    {250, 150, 1, 2, -1, 150},   // Junction 1: between track 1-2 at Y=150
-    {450, 150, 2, 3, -1, 150},   // Junction 2: between track 2-3 at Y=150
+    {410, 250, 1, 2, -1, 250},   // Junction 1: y 250
+    {630, 250, 2, 3, -1, 250},   // Junction 2: y 250
     
     // Middle junctions
-    {250, 350, 1, 2, -1, 350},   // Junction 3: between track 1-2 at Y=350
-    {450, 350, 2, 3, -1, 350},   // Junction 4: between track 2-3 at Y=350
-    {650, 350, 3, 4, -1, 350},   // Junction 5: between track 3-4 at Y=350
-    {850, 350, 4, 5, -1, 350},   // Junction 6: between track 4-5 at Y=350
+    {410, 420, 1, 2, -1, 420},   // Junction 3: y 420
+    {630, 420, 2, 3, -1, 420},   // Junction 4: y 420
+    {850, 420, 3, 4, -1, 420},   // Junction 5: y 420
+    {1070, 420, 4, 5, -1, 420},  // Junction 6: y 420
     
     // Upper junctions (near bottom)
-    {650, 550, 3, 4, -1, 550},   // Junction 7: between track 3-4 at Y=550
-    {850, 550, 4, 5, -1, 550}    // Junction 8: between track 4-5 at Y=550
+    {850, 590, 3, 4, -1, 590},   // Junction 7: y 590
+    {1070, 590, 4, 5, -1, 590}   // Junction 8: y 590
 };
 
 VisualTrain visual_trains[10];
@@ -55,7 +55,7 @@ Color bright_colors[6] = {
 
 // Calculate proper speed based on track height and travel time
 // Track height = 650 pixels (700-50), Travel time = 3 seconds, Frame rate = 60 fps
-const float BASE_SPEED = 650.0f / (2.0f * 60.0f); // 3.61 pixels per frame
+const float BASE_SPEED = 650.0f / (1.2f * 60.0f); // 3.61 pixels per frame
 
 Color getDullColor(Color c) {
     Color dull;
@@ -85,12 +85,9 @@ void drawTracks() {
         // Draw track label
         char label[20];
         sprintf(label, "Track %d", track_positions[i].track_id);
-        DrawText(label, track_positions[i].x - 15, track_positions[i].y_start - 25, 12, (Color){220, 220, 255, 255});
+        DrawText(label, track_positions[i].x - 15, track_positions[i].y_start - 60, 12, (Color){220, 220, 255, 255});
         
-        // Draw waiting area indicator
-        DrawRectangle(track_positions[i].x - 15, track_positions[i].y_start - 10, 30, 15, (Color){255, 255, 0, 100});
-        DrawText("WAIT", track_positions[i].x - 12, track_positions[i].y_start - 8, 8, BLACK);
-        
+       
         // Draw track end marker
         DrawLine(track_positions[i].x - 12, track_positions[i].y_end, 
                  track_positions[i].x + 12, track_positions[i].y_end, RED);
@@ -169,7 +166,7 @@ void* startGUI(void* arg) {
         visual_trains[i].y_pos = 50;
     }
     
-    while(!WindowShouldClose() && simulation_running) {
+    while(!WindowShouldClose() && !IsKeyPressed(KEY_ESCAPE) && simulation_running) {
         // Update visual trains based on actual train states
         pthread_mutex_lock(&visual_mutex);
         
@@ -318,7 +315,7 @@ if(visual_trains[i].moving && !visual_trains[i].using_junction) {
                 }
                 
                 /// In the movement section, add a safety timeout counter
-static int movement_timeout[TOTAL_TRACKS] = {0};
+// static int movement_timeout[TOTAL_TRACKS] = {0};
 
 // Check if reached bottom
 if(!visual_trains[i].using_junction) {
@@ -335,7 +332,7 @@ if(!visual_trains[i].using_junction) {
         visual_trains[i].waiting_at_start = 1;
         visual_trains[i].moving = 0;
         visual_trains[i].using_junction = 0;
-        movement_timeout[i] = 0;
+        // movement_timeout[i] = 0;
     }
 }
                 
@@ -365,7 +362,7 @@ if(!visual_trains[i].using_junction) {
         ClearBackground((Color){20, 15, 35, 255});
         
         // Draw title
-        DrawText("RAILWAY SIGNAL COORDINATION SYSTEM", 450, 10, 20, (Color){255, 200, 100, 255});
+        DrawText("RAILWAY SIGNAL COORDINATION SYSTEM", SCREEN_WIDTH/2 - 300, 10, 20, (Color){255, 200, 100, 255});
         
         // Draw tracks and junctions
         drawTracks();
@@ -435,79 +432,237 @@ if(!visual_trains[i].using_junction) {
         pthread_mutex_unlock(&visual_mutex);
         
         // Schedule panel
-        DrawRectangle(SCREEN_WIDTH - 260, 10, 240, 350, (Color){30, 25, 45, 230});
-        DrawRectangleLines(SCREEN_WIDTH - 260, 10, 240, 350, (Color){150, 130, 200, 255});
-        DrawText("SCHEDULE", SCREEN_WIDTH - 200, 15, 15, (Color){255, 200, 100, 255});
+        DrawRectangle(SCREEN_WIDTH - 280, 10, 270, 130, (Color){30, 25, 45, 230});
+        DrawRectangleLines(SCREEN_WIDTH - 280, 10, 270, 130, (Color){150, 130, 200, 255});
+        DrawText("SCHEDULE", SCREEN_WIDTH - 280 + 135 - MeasureText("SCHEDULE", 15)/2, 15, 15, (Color){255, 200, 100, 255});
         
         pthread_mutex_lock(&visual_mutex);
-        // Inside startGUI, in the Drawing section:
         int y_offset = 40;
-        for(int i = 0; i < global_train_count; i++) {
+        
+        for(int i = 0; i < global_train_count && i < 5; i++) {
             char schedule_text[100];
-            Color text_color = WHITE;
+            Color text_color;
             
-            if(global_trains[i].state == WAITING_SIGNAL) {
-                sprintf(schedule_text, "Train %d: CHOOSING DESTINATION", global_trains[i].id);
-                text_color = ORANGE;
-            } else if(global_trains[i].state == WAITING_TRACK) {
-                sprintf(schedule_text, "Train %d: WAITING FOR DEPARTURE", global_trains[i].id);
-                text_color = YELLOW;
-            }else if(global_trains[i].state == MOVING) {
-                // Find the visual data for this train to see if it's on a junction RIGHT NOW
-                int on_junction = 0;
-                int current_visual_track = global_trains[i].track1; 
-
-                for(int v = 0; v < num_visual_trains; v++) {
-                    if(visual_trains[v].train_id == global_trains[i].id) {
-                        on_junction = visual_trains[v].using_junction;
-                        current_visual_track = visual_trains[v].current_track;
-                        break;
-                    }
-                }
-
-                if(on_junction) {
-                    // If it's on the junction, show the full route
-                    sprintf(schedule_text, "Train %d: CROSSING (%s)", global_trains[i].id, global_trains[i].current_route_str);
-                    text_color = SKYBLUE; // Change color so it's obvious it's switching
-                } else {
-                    // If it's just on a track, only show that specific track
-                    sprintf(schedule_text, "Train %d: MOVING on Track %d", global_trains[i].id, current_visual_track);
-                    text_color = GREEN;
-                }
-            } else if(global_trains[i].state == FINISHED) {
-                // Show COMPLETED here!
-                sprintf(schedule_text, "Train %d: DONE / COMPLETED", global_trains[i].id);
+            if(global_trains[i].state == FINISHED) {
+                sprintf(schedule_text, "Train %d: JOURNEY COMPLETE", global_trains[i].id);
                 text_color = GRAY;
+            } 
+            else if(global_trains[i].waiting_at_bottom) {
+                sprintf(schedule_text, "Train %d: ARRIVED AT STATION", global_trains[i].id);
+                text_color = SKYBLUE;
             }
+            else if(global_trains[i].state == WAITING_SIGNAL) {
+                sprintf(schedule_text, "Train %d: PLANNING ROUTE", global_trains[i].id);
+                text_color = ORANGE;
+            }
+            else if(global_trains[i].state == WAITING_TRACK) {
+                sprintf(schedule_text, "Train %d: AWAITING DEPARTURE", global_trains[i].id);
+                text_color = YELLOW;
+            }
+            else if(global_trains[i].state == MOVING) {
+                sprintf(schedule_text, "Train %d: DEPARTED", global_trains[i].id);
+                    text_color = GREEN;
+            }
+            else if(global_trains[i].state == ARRIVING) {
+    sprintf(schedule_text, "Train %d: ARRIVING AT STATION", global_trains[i].id);
+    text_color = SKYBLUE;
+}
             
-            DrawText(schedule_text, SCREEN_WIDTH - 250, y_offset, 10, text_color);
-            y_offset += 20;
+            int text_width = MeasureText(schedule_text, 10);
+            DrawText(schedule_text, SCREEN_WIDTH - 280 + (270 - text_width)/2, y_offset, 10, text_color);
+            y_offset += 22;
         }
         pthread_mutex_unlock(&visual_mutex);
+
+        // Track Status Panel (moved down, size unchanged)
+        DrawRectangle(SCREEN_WIDTH - 280, 150, 270, 150, (Color){30, 25, 45, 230});
+        DrawRectangleLines(SCREEN_WIDTH - 280, 150, 270, 150, (Color){150, 130, 200, 255});
+        DrawText("TRACK STATUS", SCREEN_WIDTH - 280 + 135 - MeasureText("TRACK STATUS", 11)/2, 165, 11, (Color){255, 200, 100, 255});
+
+        // Find where trains are actually moving on tracks (not on junctions)
+        int moving_trains_on_track[TOTAL_TRACKS] = {0};
+        
+        pthread_mutex_lock(&visual_mutex);
+        for(int v = 0; v < num_visual_trains; v++) {
+            if(visual_trains[v].train_id != -1 && visual_trains[v].moving == 1) {
+                // Only show on track if NOT using a junction
+                if(visual_trains[v].using_junction == 0) {
+                    int track_idx = visual_trains[v].current_track - 1;
+                    moving_trains_on_track[track_idx] = visual_trains[v].train_id;
+                }
+            }
+        }
+        pthread_mutex_unlock(&visual_mutex);
+
+        // Display track status
+        int y_track = 190;
+        for(int i = 0; i < TOTAL_TRACKS; i++) {
+            char track_text[60];
+            if(moving_trains_on_track[i] != 0) {
+                sprintf(track_text, "Track %d: Train %d (MOVING)", i+1, moving_trains_on_track[i]);
+                int text_width = MeasureText(track_text, 10);
+                DrawText(track_text, SCREEN_WIDTH - 280 + (270 - text_width)/2, y_track, 10, (Color){255, 80, 80, 255});
+            } else {
+                sprintf(track_text, "Track %d: FREE", i+1);
+                int text_width = MeasureText(track_text, 10);
+                DrawText(track_text, SCREEN_WIDTH - 280 + (270 - text_width)/2, y_track, 10, (Color){80, 255, 80, 255});
+            }
+            y_track += 20;
+        }
+
+        // JUNCTION STATUS panel (BIGGER - moved down)
+        DrawRectangle(SCREEN_WIDTH - 280, 310, 270, 170, (Color){30, 25, 45, 230});
+        DrawRectangleLines(SCREEN_WIDTH - 280, 310, 270, 170, (Color){150, 130, 200, 255});
+        DrawText("JUNCTION STATUS", SCREEN_WIDTH - 280 + 135 - MeasureText("JUNCTION STATUS", 11)/2, 315, 11, (Color){255, 200, 100, 255});
+        
+        int y_junc = 335;
+        for(int j = 0; j < TOTAL_JUNCTIONS; j++) {
+            char junc_text[60];
+            if(junctions[j].occupied_by != -1) {
+                sprintf(junc_text, "J%d: Train %d (BUSY)", j+1, junctions[j].occupied_by);
+                int text_width = MeasureText(junc_text, 9);
+                DrawText(junc_text, SCREEN_WIDTH - 280 + (270 - text_width)/2, y_junc, 9, (Color){255, 80, 80, 255});
+            } else {
+                sprintf(junc_text, "J%d: FREE", j+1);
+                int text_width = MeasureText(junc_text, 9);
+                DrawText(junc_text, SCREEN_WIDTH - 280 + (270 - text_width)/2, y_junc, 9, (Color){80, 255, 80, 255});
+            }
+            y_junc += 18;
+        }
+
+        // Current Loop Info Panel (BIGGER - moved down)
+        DrawRectangle(SCREEN_WIDTH - 280, 490, 270, 110, (Color){30, 25, 45, 230});
+        DrawRectangleLines(SCREEN_WIDTH - 280, 490, 270, 110, (Color){150, 130, 200, 255});
+        DrawText("CURRENT LOOPS", SCREEN_WIDTH - 280 + 135 - MeasureText("CURRENT LOOPS", 11)/2, 495, 11, (Color){255, 200, 100, 255});
+
+        int y_loop = 515;
+        for(int i = 0; i < global_train_count && i < 5; i++) {
+            char loop_text[50];
+            if(global_trains[i].state == FINISHED) {
+                sprintf(loop_text, "Train %d: COMPLETED", global_trains[i].id);
+            } else {
+                sprintf(loop_text, "Train %d: Loop %d of %d", global_trains[i].id, global_trains[i].loop_count + 1, global_trains[i].max_loops);
+            }
+            int text_width = MeasureText(loop_text, 9);
+            DrawText(loop_text, SCREEN_WIDTH - 280 + (270 - text_width)/2, y_loop, 9, (Color){220, 220, 255, 255});
+            y_loop += 18;
+        }
+
+        // Waiting Times Panel (moved down)
+        DrawRectangle(SCREEN_WIDTH - 280, 610, 270, 120, (Color){30, 25, 45, 230});
+        DrawRectangleLines(SCREEN_WIDTH - 280, 610, 270, 120, (Color){150, 130, 200, 255});
+        DrawText("WAITING TIMES", SCREEN_WIDTH - 280 + 135 - MeasureText("WAITING TIMES", 9)/2, 615, 9, (Color){255, 200, 100, 255});
+
+        int y_wait = 635;
+        double total_all_waits = 0;
+        int trains_with_data = 0;
+        time_t current_time = time(NULL);
+
+        for(int i = 0; i < global_train_count; i++) {
+            char wait_text[80];
+            int show_train = 0;
+            double avg_wait = 0;
+            
+            // CASE 1: Train is currently waiting (CHOOSING DESTINATION or WAITING FOR DEPARTURE)
+            if((global_trains[i].state == WAITING_SIGNAL || global_trains[i].state == WAITING_TRACK) && global_trains[i].is_currently_waiting) {
+                double current_wait = difftime(current_time, global_trains[i].current_wait_start);
+                if(global_trains[i].wait_count > 0) {
+                    avg_wait = global_trains[i].total_wait_time / global_trains[i].wait_count;
+                    sprintf(wait_text, "Train %d: Now %.0fs (Avg %.1fs)", global_trains[i].id, current_wait, avg_wait);
+                    total_all_waits += avg_wait;
+                    trains_with_data++;
+                } else {
+                    sprintf(wait_text, "Train %d: Now %.0fs", global_trains[i].id, current_wait);
+                }
+                show_train = 1;
+            }
+            // CASE 2: Train has finished all loops (DONE)
+            else if(global_trains[i].state == FINISHED && global_trains[i].wait_count > 0) {
+                avg_wait = global_trains[i].total_wait_time / global_trains[i].wait_count;
+                sprintf(wait_text, "Train %d: Avg %.1fs (DONE)", global_trains[i].id, avg_wait);
+                total_all_waits += avg_wait;
+                trains_with_data++;
+                show_train = 1;
+            }
+            // CASE 3: Train is moving or at station (show average only if it has waited before)
+            else if(global_trains[i].wait_count > 0 && (global_trains[i].state == MOVING || global_trains[i].waiting_at_bottom)) {
+                avg_wait = global_trains[i].total_wait_time / global_trains[i].wait_count;
+                sprintf(wait_text, "Train %d: Avg %.1fs (MOVING)", global_trains[i].id, avg_wait);
+                total_all_waits += avg_wait;
+                trains_with_data++;
+                show_train = 1;
+            }
+            
+            if(show_train) {
+                int text_width = MeasureText(wait_text, 9);
+                DrawText(wait_text, SCREEN_WIDTH - 280 + (270 - text_width)/2, y_wait, 9, (Color){220, 220, 255, 255});
+                y_wait += 16;
+            }
+        }
+        
+        if(y_wait == 625) {
+            DrawText("No data yet", SCREEN_WIDTH - 280 + 135 - MeasureText("No data yet", 9)/2, y_wait, 9, (Color){255, 200, 100, 255});
+        }
+
+        // Total Average Wait Time Panel (moved down)
+        DrawRectangle(SCREEN_WIDTH - 280, 740, 270, 55, (Color){30, 25, 45, 230});
+        DrawRectangleLines(SCREEN_WIDTH - 280, 740, 270, 55, (Color){150, 130, 200, 255});
+        DrawText("TOTAL AVG WAIT TIME", SCREEN_WIDTH - 280 + 135 - MeasureText("TOTAL AVG WAIT TIME", 9)/2, 745, 9, (Color){255, 200, 100, 255});
+
+        if(trains_with_data > 0) {
+            double total_avg = total_all_waits / trains_with_data;
+            char total_text[50];
+            sprintf(total_text, "%.1f seconds (over %d trains)", total_avg, trains_with_data);
+            int text_width = MeasureText(total_text, 11);
+            DrawText(total_text, SCREEN_WIDTH - 280 + (270 - text_width)/2, 768, 11, (Color){100, 255, 200, 255});
+        } else {
+            DrawText("Calculating...", SCREEN_WIDTH - 280 + 135 - MeasureText("Calculating...", 11)/2, 768, 11, (Color){255, 200, 100, 255});
+        }
+// Legend (Bottom Left) - your existing legend code continues here
         
         // Legend
-        DrawRectangle(10, SCREEN_HEIGHT - 120, 220, 110, (Color){30, 25, 45, 230});
-        DrawRectangleLines(10, SCREEN_HEIGHT - 120, 220, 110, (Color){150, 130, 200, 255});
-        DrawText("LEGEND:", 15, SCREEN_HEIGHT - 115, 12, (Color){255, 200, 100, 255});
-        DrawCircle(15, SCREEN_HEIGHT - 95, 8, GREEN);
-        DrawText("Green Junction (Free)", 30, SCREEN_HEIGHT - 100, 10, (Color){220, 220, 255, 255});
-        DrawCircle(15, SCREEN_HEIGHT - 75, 8, RED);
-        DrawText("Red Junction (Occupied)", 30, SCREEN_HEIGHT - 80, 10, (Color){220, 220, 255, 255});
-        DrawRectangle(15, SCREEN_HEIGHT - 55, 20, 15, (Color){100, 150, 255, 255});
-        DrawText("Bright: Moving", 40, SCREEN_HEIGHT - 60, 10, (Color){220, 220, 255, 255});
+        DrawRectangle(10, SCREEN_HEIGHT - 300, 220, 120, (Color){30, 25, 45, 230});
+        DrawRectangleLines(10, SCREEN_HEIGHT - 300, 220, 120, (Color){150, 130, 200, 255});
+        DrawText("SYMBOLS:", 75, SCREEN_HEIGHT - 320, 15, (Color){255, 200, 100, 255});
+        DrawCircle(25, SCREEN_HEIGHT - 280, 8,GREEN);
+        DrawText("Green Junction (Free)", 60, SCREEN_HEIGHT - 285, 12, (Color){220, 220, 255, 255});
+        DrawCircle(25, SCREEN_HEIGHT - 260, 8, RED);
+        DrawText("Red Junction (Occupied)", 60, SCREEN_HEIGHT - 265, 12, (Color){220, 220, 255, 255});
+        DrawRectangle(15, SCREEN_HEIGHT - 250, 20, 15, (Color){100, 150, 255, 255});
+        DrawText("Bright: Moving", 60, SCREEN_HEIGHT - 245, 12, (Color){220, 220, 255, 255});
         Color dull_blue = {50, 75, 128, 200};
-        DrawRectangle(15, SCREEN_HEIGHT - 40, 20, 15, dull_blue);
-        DrawText("Dull: Waiting", 40, SCREEN_HEIGHT - 45, 10, (Color){220, 220, 255, 255});
-        DrawCircle(15, SCREEN_HEIGHT - 25, 6, YELLOW);
-        DrawText("! = Waiting at Start", 30, SCREEN_HEIGHT - 30, 10, (Color){220, 220, 255, 255});
+        DrawRectangle(15, SCREEN_HEIGHT - 227, 20, 15, dull_blue);
+        DrawText("Dull: Waiting", 60, SCREEN_HEIGHT - 225, 12, (Color){220, 220, 255, 255});
+        DrawCircle(25, SCREEN_HEIGHT - 200, 7, YELLOW);
+        DrawText("!", 25, SCREEN_HEIGHT-205, 12, BLACK);
+        DrawText("Waiting at Station", 60, SCREEN_HEIGHT - 205, 12, (Color){220, 220, 255, 255});
         
         EndDrawing();
         
         usleep(16000);
     }
     
-    simulation_running = 0;
-    printf("\nGUI window closed. Stopping simulation...\n");
+        simulation_running = 0;
+    printf("\nSimulation completed. Press ESC to close window.\n");
+    
+    // Wait for ESC key to close
+    while(!WindowShouldClose() && !IsKeyPressed(KEY_ESCAPE)) {
+        BeginDrawing();
+        ClearBackground((Color){20, 15, 35, 255});
+        DrawText("SIMULATION COMPLETED", SCREEN_WIDTH/2 - 150, SCREEN_HEIGHT/2 - 30, 25, (Color){100, 255, 100, 255});
+        DrawText("Press ESC to exit", SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT/2 + 20, 15, (Color){255, 200, 100, 255});
+        
+        // Also show final statistics on screen
+        int completed = 0;
+        for(int i = 0; i < global_train_count; i++) {
+            if(global_trains[i].state == FINISHED) completed++;
+        }
+        char stats_text[100];
+        sprintf(stats_text, "Completed: %d/%d trains", completed, global_train_count);
+        DrawText(stats_text, SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT/2 + 60, 12, (Color){220, 220, 255, 255});
+        
+        EndDrawing();
+    }
     
     CloseWindow();
     return NULL;
