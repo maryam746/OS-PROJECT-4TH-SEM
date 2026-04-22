@@ -66,7 +66,7 @@ int main() {
     
     printf("Starting %d trains with 3 loops each...\n\n", num_trains);
     
-    for(int i = 0; i < num_trains; i++) {
+        for(int i = 0; i < num_trains; i++) {
         trains[i].id = i + 1;
         trains[i].color_index = i;
         trains[i].state = WAITING_SIGNAL;
@@ -78,6 +78,11 @@ int main() {
         trains[i].track1 = i + 1;
         trains[i].track2 = 0;
         trains[i].reached_bottom = 0;
+        trains[i].waiting_at_bottom = 0;
+        trains[i].total_wait_time = 0;
+        trains[i].wait_count = 0;
+        trains[i].current_wait_start = 0;
+        trains[i].is_currently_waiting = 0;
         strcpy(trains[i].current_route_str, "");
         
         printf("Train %d: starts on Track %d, %d loops\n", 
@@ -97,7 +102,31 @@ int main() {
     printf("\n========================================\n");
     printf("SIMULATION COMPLETED\n");
     printf("========================================\n");
-    
+ 
+ 
+    // After all trains finish, print final statistics
+printf("\n========================================\n");
+printf("FINAL WAITING TIME STATISTICS\n");
+printf("========================================\n\n");
+
+double grand_total = 0;
+int train_count = 0;
+
+for(int i = 0; i < num_trains; i++) {
+    if(trains[i].wait_count > 0) {
+        double avg = trains[i].total_wait_time / trains[i].wait_count;
+        grand_total += avg;
+        train_count++;
+        printf("Train %d: Average Wait Time = %.2f seconds (over %d waits)\n", 
+               trains[i].id, avg, trains[i].wait_count);
+    }
+}
+
+if(train_count > 0) {
+    printf("\n========================================\n");
+    printf("OVERALL AVERAGE WAIT TIME: %.2f seconds\n", grand_total / train_count);
+    printf("========================================\n");
+}
     close_logging();
     sleep(2);
     
