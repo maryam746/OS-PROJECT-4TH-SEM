@@ -11,6 +11,7 @@
 #define TRAIN_HEIGHT 50
 #define TOTAL_TRACKS 5
 #define TOTAL_JUNCTIONS 8  // Increased to 8 junctions
+#define SAFE_GAP (TRAIN_HEIGHT + 15)
 
 
 // Track positions structure
