@@ -85,8 +85,15 @@ void* train(void* arg) {
         // Pre-departure delay
         sleep(t->loop_count == 0 ? t->departure_time : 2);
         
-        // 2. The "Anti-Starvation" Loop
+        // time_t wait_start = time(NULL);
+        
+               // 2. The "Anti-Starvation" Loop
         int has_resources = 0;
+        
+        // START WAITING - record time
+        t->current_wait_start = time(NULL);
+        t->is_currently_waiting = 1;
+        
         while(!has_resources && simulation_running) {
             // Check if it's my turn in the FIFO queue
             pthread_mutex_lock(&queue_mutex);
@@ -101,10 +108,8 @@ void* train(void* arg) {
             }
             
             if(oldest != NULL && oldest->id == t->id) {
-                // It is my turn! Now check if the tracks are actually clear.
                 pthread_mutex_lock(&print_mutex);
                 if (!is_path_blocked(t->track1, t->track2)) {
-                    // PATH IS CLEAR: Claim it immediately
                     track_status[t->track1-1] = t->id;
                     track_status[t->track2-1] = t->id;
                     has_resources = 1;
@@ -114,7 +119,16 @@ void* train(void* arg) {
             }
             pthread_mutex_unlock(&queue_mutex);
 
-            if(!has_resources) usleep(100000); // Wait and try again
+            if(!has_resources) usleep(100000);
+        }
+        
+        // STOP WAITING - calculate wait time
+        if(t->is_currently_waiting) {
+            time_t wait_end = time(NULL);
+            double wait_time = difftime(wait_end, t->current_wait_start);
+            t->total_wait_time += wait_time;
+            t->wait_count++;
+            t->is_currently_waiting = 0;
         }
 
         if(!simulation_running) break;
@@ -130,7 +144,7 @@ void* train(void* arg) {
         while(!t->reached_bottom && simulation_running) {
             usleep(50000);
         }
-
+        
         // 4. Release everything
         pthread_mutex_lock(&print_mutex);
         track_status[t->track1-1] = 0;
