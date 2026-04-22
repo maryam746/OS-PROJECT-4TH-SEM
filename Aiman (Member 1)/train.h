@@ -10,13 +10,14 @@ typedef enum {
     WAITING_SIGNAL,
     WAITING_TRACK,
     MOVING,
+    ARRIVING,
     FINISHED
 } TrainState;
 
 typedef struct {
     int id;
-    int track1;          // Current track (1-5)
-    int track2;          // Destination track (1-5)
+    int track1;
+    int track2;
     int color_index;
     TrainState state;
     int departure_time;
@@ -24,8 +25,13 @@ typedef struct {
     int max_loops;
     time_t arrival_time;
     time_t finish_time;
-    char current_route_str[64];  // Route description for GUI
+    char current_route_str[64];
     volatile int reached_bottom;
+    volatile int waiting_at_bottom;
+    double total_wait_time;
+    int wait_count;
+    time_t current_wait_start;
+    int is_currently_waiting;
 } Train;
 
 void* train(void* arg);
