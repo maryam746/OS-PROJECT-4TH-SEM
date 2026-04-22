@@ -5,8 +5,8 @@
 #include "raylib.h"
 
 // Constants
-#define SCREEN_WIDTH 1400
-#define SCREEN_HEIGHT 800
+#define SCREEN_WIDTH 1600
+#define SCREEN_HEIGHT 1000
 #define TRAIN_WIDTH 35
 #define TRAIN_HEIGHT 50
 #define TOTAL_TRACKS 5
