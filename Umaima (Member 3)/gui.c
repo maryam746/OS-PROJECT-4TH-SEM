@@ -609,28 +609,10 @@ void* startGUI(void* arg) {
         DrawText("Waiting at Station", 60, SCREEN_HEIGHT - 205, 12, (Color){220, 220, 255, 255});
         
         EndDrawing();
-        usleep(16000);
+        usleep(50000);
     }
     
-    simulation_running = 0;
-    printf("\nSimulation completed. Press ESC to close window.\n");
-    
-    while(!WindowShouldClose() && !IsKeyPressed(KEY_ESCAPE)) {
-        BeginDrawing();
-        ClearBackground((Color){20, 15, 35, 255});
-        DrawText("SIMULATION COMPLETED", SCREEN_WIDTH/2 - 150, SCREEN_HEIGHT/2 - 30, 25, (Color){100, 255, 100, 255});
-        DrawText("Press ESC to exit", SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT/2 + 20, 15, (Color){255, 200, 100, 255});
-        
-        int completed = 0;
-        for(int i = 0; i < global_train_count; i++) {
-            if(global_trains[i].state == FINISHED) completed++;
-        }
-        char stats_text[100];
-        sprintf(stats_text, "Completed: %d/%d trains", completed, global_train_count);
-        DrawText(stats_text, SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT/2 + 60, 12, (Color){220, 220, 255, 255});
-        
-        EndDrawing();
-    }
+
     
     CloseWindow();
     return NULL;
