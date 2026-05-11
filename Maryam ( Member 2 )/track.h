@@ -5,13 +5,13 @@
 
 #define TOTAL_TRACKS 5
 
-typedef struct {
+typedef struct {                //har track keliye
     int id;
-    pthread_mutex_t mutex;
+    pthread_mutex_t mutex;   //one train per track at a time
 } TrackSegment;
 
-extern TrackSegment tracks[TOTAL_TRACKS];
+extern TrackSegment tracks[TOTAL_TRACKS];       //taake multiple definitions na hon aik hi baar consider hojaye
 
-void initializeTracks();
+void initializeTracks();    //initializing mutexes
 
 #endif
