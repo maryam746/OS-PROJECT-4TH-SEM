@@ -561,7 +561,7 @@ else if(visual_trains[i].waiting_at_start && is_front_train) {
                 show_train = 1;
             }
             // CASE 3: Train is moving or at station (show average only if it has waited before)
-            else if(global_trains[i].wait_count > 0 && (global_trains[i].state == MOVING || global_trains[i].waiting_at_bottom)) {
+            else if(global_trains[i].wait_count > 0 && (global_trains[i].state == MOVING )) {
                 avg_wait = global_trains[i].total_wait_time / global_trains[i].wait_count;
                 sprintf(wait_text, "Train %d: Avg %.1fs (MOVING)", global_trains[i].id, avg_wait);
                 total_all_waits += avg_wait;
