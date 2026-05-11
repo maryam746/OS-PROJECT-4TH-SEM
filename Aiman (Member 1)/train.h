@@ -7,8 +7,8 @@
 extern int track_status[TOTAL_TRACKS];  //0=free wrna train_id 1-5
 
 typedef enum {
-    WAITING_SIGNAL,     //chosen destination but waiting for sem
-    WAITING_TRACK,      //signal mil gya dest track keliye wait kr rhe hain
+    WAITING_SIGNAL,     //chosen destination wating for both
+    WAITING_TRACK,      //track assignment hogyi waiting for sem
     MOVING,
     ARRIVING,
     FINISHED
@@ -36,7 +36,7 @@ typedef struct {
 void* train(void* arg);
 
 extern Train* global_trains;
-extern int global_train_count;      //no of active trains
+extern int global_train_count;      //no of trains
 extern FILE* log_file;
 extern volatile int simulation_running;
 
