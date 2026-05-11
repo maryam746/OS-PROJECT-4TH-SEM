@@ -17,6 +17,10 @@ volatile int simulation_running = 1;
 long global_arrival_counter = 0;
 pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
+// Dedicated mutex for track_status: must be held for the entire
+// check-then-claim sequence so two threads can never both pass
+// is_path_blocked() and then both write track_status.
+pthread_mutex_t track_status_mutex = PTHREAD_MUTEX_INITIALIZER;
 int track_status[TOTAL_TRACKS] = {0};
 
 
@@ -50,8 +54,8 @@ void unlock_route(int start, int end) {
     }
 }
 
-// Check if ANY track in the intended path is currently occupied
-int is_path_blocked(int start, int end) {
+// Must be called while holding track_status_mutex.
+static int is_path_blocked(int start, int end) {
     int low = (start < end) ? start : end;
     int high = (start > end) ? start : end;
     for (int i = low - 1; i <= high - 1; i++) {
@@ -108,14 +112,17 @@ void* train(void* arg) {
             }
             
             if(oldest != NULL && oldest->id == t->id) {
-                pthread_mutex_lock(&print_mutex);
+                // Hold track_status_mutex for the entire check-then-claim so
+                // no other thread can sneak between our is_path_blocked() check
+                // and our track_status[] writes.
+                pthread_mutex_lock(&track_status_mutex);
                 if (!is_path_blocked(t->track1, t->track2)) {
                     track_status[t->track1-1] = t->id;
                     track_status[t->track2-1] = t->id;
                     has_resources = 1;
                     t->state = WAITING_TRACK;
                 }
-                pthread_mutex_unlock(&print_mutex);
+                pthread_mutex_unlock(&track_status_mutex);
             }
             pthread_mutex_unlock(&queue_mutex);
 
@@ -146,10 +153,14 @@ void* train(void* arg) {
         }
         
         // 4. Release everything
-        pthread_mutex_lock(&print_mutex);
-        track_status[t->track1-1] = 0;
-        track_status[t->track2-1] = 0;
-        pthread_mutex_unlock(&print_mutex);
+        // Only zero slots that still belong to THIS train.
+        // Two routes can share a track endpoint (e.g. T1->T3 and T3->T5
+        // both own track_status[2]). A blind =0 would wipe the other
+        // train's claim and let a third train collide with it.
+        pthread_mutex_lock(&track_status_mutex);
+        if (track_status[t->track1-1] == t->id) track_status[t->track1-1] = 0;
+        if (track_status[t->track2-1] == t->id) track_status[t->track2-1] = 0;
+        pthread_mutex_unlock(&track_status_mutex);
 
         unlock_route(t->track1, t->track2);
         releaseSignal();
