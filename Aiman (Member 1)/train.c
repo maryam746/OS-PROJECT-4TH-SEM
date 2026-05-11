@@ -67,7 +67,7 @@ void* train(void* arg) {
     
     while(t->loop_count < t->max_loops && simulation_running) {
         t->reached_bottom = 0;
-        
+        pthread_mutex_lock(&train_route);
         int direction = (rand() % 2 == 0) ? 1 : -1;     //right ya left
         int max_jump = 1 + (rand() % 2);        //train 1-2 tracks door jaa skti hai
         t->track2 = t->track1 + (direction * max_jump);
