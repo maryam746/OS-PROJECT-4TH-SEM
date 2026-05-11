@@ -4,11 +4,11 @@
 #include <time.h>
 #include <stdio.h>
 
-extern int track_status[TOTAL_TRACKS];
+extern int track_status[TOTAL_TRACKS];  //0=free wrna train_id 1-5
 
 typedef enum {
-    WAITING_SIGNAL,
-    WAITING_TRACK,
+    WAITING_SIGNAL,     //chosen destination but waiting for sem
+    WAITING_TRACK,      //signal mil gya dest track keliye wait kr rhe hain
     MOVING,
     ARRIVING,
     FINISHED
@@ -16,17 +16,17 @@ typedef enum {
 
 typedef struct {
     int id;
-    int track1;
-    int track2;
+    int track1;             //start
+    int track2;             //end
     int color_index;
     TrainState state;
-    int departure_time;
+    int departure_time;     //shru ka delay
     int loop_count;
-    int max_loops;
-    time_t arrival_time;
+    int max_loops;          //3
+    time_t arrival_time;        //for queueing at the top
     time_t finish_time;
-    char current_route_str[64];
-    volatile int reached_bottom;
+    char current_route_str[64];         //string jo show hogi
+    volatile int reached_bottom;    //gui thread train thread ko bataata hai to complete loop iteration
     double total_wait_time;
     int wait_count;
     time_t current_wait_start;
@@ -35,9 +35,8 @@ typedef struct {
 
 void* train(void* arg);
 
-// Global variables
 extern Train* global_trains;
-extern int global_train_count;
+extern int global_train_count;      //no of active trains
 extern FILE* log_file;
 extern volatile int simulation_running;
 
