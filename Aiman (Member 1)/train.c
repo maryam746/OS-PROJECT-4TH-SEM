@@ -148,7 +148,7 @@ void* train(void* arg) {
                 track_status[k] = 0;
             }
         }
-
+        t->state = ARRIVING;
         pthread_mutex_unlock(&track_status_mutex);
         unlock_route(t->track1, t->track2);
         releaseSignal();
