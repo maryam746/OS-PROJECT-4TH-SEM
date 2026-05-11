@@ -7,16 +7,15 @@
 #include <stdlib.h>
 #include "signal.h"
 
-// Declare external variables (defined in train.c)
+//train wali cheezein
 extern Train* global_trains;
 extern int global_train_count;
 extern int track_status[];
 extern FILE* log_file;
 extern volatile int simulation_running;
 
-// Define global GUI variables
 TrackData track_positions[TOTAL_TRACKS] = {
-    {300, 120, 720, 1},
+    {300, 120, 720, 1},     //x, y_start, y_end, id
     {520, 120, 720, 2},
     {740, 120, 720, 3},
     {960, 120, 720, 4},
@@ -24,14 +23,14 @@ TrackData track_positions[TOTAL_TRACKS] = {
 };
 
 Junction junctions[TOTAL_JUNCTIONS] = {
-    {410, 250, 1, 2, -1, 250},
-    {630, 250, 2, 3, -1, 250},
-    {410, 420, 1, 2, -1, 420},
-    {630, 420, 2, 3, -1, 420},
-    {850, 420, 3, 4, -1, 420},
-    {1070, 420, 4, 5, -1, 420},
-    {850, 590, 3, 4, -1, 590},
-    {1070, 590, 4, 5, -1, 590}
+    {410, 250, 1, 2, -1},      //x,y,from, to, occupied by (-1=none)
+    {630, 250, 2, 3, -1},
+    {410, 420, 1, 2, -1},
+    {630, 420, 2, 3, -1},
+    {850, 420, 3, 4, -1},
+    {1070, 420, 4, 5, -1},
+    {850, 590, 3, 4, -1},
+    {1070, 590, 4, 5, -1}
 };
 
 VisualTrain visual_trains[10];
@@ -47,7 +46,7 @@ Color bright_colors[6] = {
     (Color){150, 150, 255, 255}
 };
 
-const float BASE_SPEED = 650.0f / (1.2f * 60.0f);
+const float BASE_SPEED = 650.0f / (1.2f * 60.0f);       //720-120=650   60fps 1.2sec
 #define SAFE_GAP (TRAIN_HEIGHT + 15)
 
 Color getDullColor(Color c) {
@@ -60,14 +59,14 @@ Color getDullColor(Color c) {
 }
 
 float get_nearest_train_ahead(int self_idx, int track_id) {
-    float nearest = -1.0f;
+    float nearest = -1.0f;          //y pos of aage wali train
     float self_y = visual_trains[self_idx].y_pos;
 
     for (int i = 0; i < num_visual_trains; i++) {
-        if (i == self_idx) continue;
-        if (visual_trains[i].train_id == -1) continue;
-        if (visual_trains[i].using_junction) continue;
-        if (visual_trains[i].current_track != track_id) continue;
+        if (i == self_idx) continue;        //apne se compare nhi krna
+        if (visual_trains[i].train_id == -1) continue;      //invalid train
+        if (visual_trains[i].using_junction) continue;      //junction pr hoti hai not on track
+        if (visual_trains[i].current_track != track_id) continue;       //is track pr nhi hai ot ignore
 
         float other_y = visual_trains[i].y_pos;
         if (other_y > self_y) {
@@ -81,40 +80,37 @@ float get_nearest_train_ahead(int self_idx, int track_id) {
 
 void drawTracks() {
     for(int i = 0; i < TOTAL_TRACKS; i++) {
-        DrawLine(track_positions[i].x, track_positions[i].y_start, 
-                track_positions[i].x, track_positions[i].y_end, (Color){180, 180, 220, 255});
+        DrawLine(track_positions[i].x, track_positions[i].y_start, track_positions[i].x, track_positions[i].y_end, (Color){180, 180, 220, 255});    //light bluish grey main rail
 
         for(int y = track_positions[i].y_start; y < track_positions[i].y_end; y += 20) {
-            DrawLine(track_positions[i].x - 8, y, track_positions[i].x + 8, y, (Color){120, 120, 150, 255});
+            DrawLine(track_positions[i].x - 8, y, track_positions[i].x + 8, y, (Color){120, 120, 150, 255});        //grey horizontal lines
         }
 
-        Color track_bed = {60, 50, 80, 80};
-        DrawRectangle(track_positions[i].x - 12, track_positions[i].y_start, 
-                    24, track_positions[i].y_end - track_positions[i].y_start, track_bed);
+        Color track_bed = {60, 50, 80, 80};   //semi-transparent purple  
+        DrawRectangle(track_positions[i].x - 12, track_positions[i].y_start,  24, track_positions[i].y_end - track_positions[i].y_start, track_bed);
         
         char label[20];
         sprintf(label, "Track %d", track_positions[i].track_id);
         DrawText(label, track_positions[i].x - 15, track_positions[i].y_start - 60, 12, (Color){220, 220, 255, 255});
         
-        DrawLine(track_positions[i].x - 12, track_positions[i].y_end, 
-                 track_positions[i].x + 12, track_positions[i].y_end, RED);
+        DrawLine(track_positions[i].x - 12, track_positions[i].y_end, track_positions[i].x + 12, track_positions[i].y_end, RED);
         DrawText("END", track_positions[i].x - 10, track_positions[i].y_end + 5, 8, RED);
     }
 }
 
 void drawJunctions() {
     for(int i = 0; i < TOTAL_JUNCTIONS; i++) {
-        int from_idx = junctions[i].from_track - 1;
+        int from_idx = junctions[i].from_track - 1;     //wahaan 1-5 stored hain
         int to_idx = junctions[i].to_track - 1;
         int junction_y = junctions[i].y;
         
-        for(float t = 0; t <= 1; t += 0.05) {
+        for(float t = 0; t <= 1; t += 0.05) {   //curve k along pos decide krne keliye
             float cur_x = track_positions[from_idx].x + (track_positions[to_idx].x - track_positions[from_idx].x) * t;
             float cur_y = junction_y - 15 + (30 * sinf(t * 3.14159f));
             DrawCircle(cur_x, cur_y, 1.5f, (Color){150, 150, 200, 150});
         }
         
-        Color junction_color = (junctions[i].occupied_by == -1) ? GREEN : RED;
+        Color junction_color = (junctions[i].occupied_by == -1) ? GREEN : RED;  //free to green wrna red
         DrawCircle(junctions[i].x, junctions[i].y, 10, junction_color);
         DrawCircle(junctions[i].x, junctions[i].y, 6, (Color){20, 20, 40, 255});
         
@@ -130,7 +126,7 @@ void drawTrain(int x, int y, int train_id, int is_moving, Color color, int waiti
     DrawRectangle(x - TRAIN_WIDTH/2, y - TRAIN_HEIGHT/2, TRAIN_WIDTH, TRAIN_HEIGHT, train_color);
     DrawRectangleLines(x - TRAIN_WIDTH/2, y - TRAIN_HEIGHT/2, TRAIN_WIDTH, TRAIN_HEIGHT, BLACK);
     
-    DrawCircle(x - 8, y + TRAIN_HEIGHT/8, 4, WHITE);
+    DrawCircle(x - 8, y + TRAIN_HEIGHT/8, 4, WHITE);   
     DrawCircle(x + 8, y + TRAIN_HEIGHT/8, 4, WHITE);
     
     char num[5];
@@ -162,14 +158,13 @@ void* startGUI(void* arg) {
     }
     
     while(!WindowShouldClose() && !IsKeyPressed(KEY_ESCAPE) && simulation_running) {
-        pthread_mutex_lock(&visual_mutex);
+        pthread_mutex_lock(&visual_mutex);      //for train
         
-        // Add new trains
-        for(int i = 0; i < global_train_count; i++) {
+        for(int i = 0; i < global_train_count; i++) {       //train creation
             Train* t = &global_trains[i];
             int found = 0;
             
-            for(int j = 0; j < num_visual_trains; j++) {
+            for(int j = 0; j < num_visual_trains; j++) {    //agar train pehle se hai to banaane ki zaroorat nhi
                 if(visual_trains[j].train_id == t->id) {
                     found = 1;
                     break;
@@ -186,15 +181,12 @@ void* startGUI(void* arg) {
                 visual_trains[num_visual_trains].waiting_at_start = (t->state != MOVING);
                 visual_trains[num_visual_trains].junction_progress = 0;
                 visual_trains[num_visual_trains].speed = BASE_SPEED;
-                visual_trains[num_visual_trains].junctions_used = 0;
-                visual_trains[num_visual_trains].max_junctions = abs(t->track2 - t->track1);
                 num_visual_trains++;
             }
         }
         
-        // Update visual trains
-        for(int i = 0; i < num_visual_trains; i++) {
-            Train* actual_train = NULL;
+        for(int i = 0; i < num_visual_trains; i++) {    //for updating trains
+            Train* actual_train = NULL;         //har visual train keliye correspondign actual train dhoondo
             for(int j = 0; j < global_train_count; j++) {
                 if(global_trains[j].id == visual_trains[i].train_id) {
                     actual_train = &global_trains[j];
@@ -207,11 +199,10 @@ void* startGUI(void* arg) {
                 visual_trains[i].dest_track = actual_train->track2;
                 
                 if (actual_train->state == WAITING_SIGNAL || actual_train->state == WAITING_TRACK) {
-                    visual_trains[i].waiting_at_start = 1;
-                    visual_trains[i].moving = 0;
+                    visual_trains[i].waiting_at_start = 1;     
                     
                     if (visual_trains[i].y_pos > track_positions[actual_train->track1-1].y_start + 10) {
-                        visual_trains[i].y_pos = track_positions[actual_train->track1-1].y_start;
+                        visual_trains[i].y_pos = track_positions[actual_train->track1-1].y_start;   //clamping
                         visual_trains[i].current_track = actual_train->track1;
                     }
                     
@@ -222,12 +213,12 @@ void* startGUI(void* arg) {
                     visual_trains[i].waiting_at_start = 0;
                 }
                 
+                //checking k start aur end track neighbors hain ya nhi
                 int tracks_adjacent = (abs(visual_trains[i].current_track - visual_trains[i].dest_track) == 1);
                 
-                // Movement with SAFE_GAP collision prevention
                 if(visual_trains[i].moving && !visual_trains[i].using_junction) {
                     float nearest_ahead = get_nearest_train_ahead(i, visual_trains[i].current_track);
-                    int blocked_by_train = 0;
+                    int blocked_by_train = 0;       //agli train safe dist pr har to move wrna blocked/wait
                     
                     if (nearest_ahead >= 0.0f) {
                         float gap = nearest_ahead - visual_trains[i].y_pos;
@@ -258,23 +249,42 @@ void* startGUI(void* arg) {
                             }
                             
                             if(junction_count > 0) {
-                                int use_junction = (rand() % 100 < 70);
+                                int use_junction = (rand() % 100 < 70);     //70% chance hai k junction use kro
+                                
                                 if(use_junction) {
                                     int target_junction = available_junctions[rand() % junction_count];
-                                    if(junctions[target_junction].occupied_by == -1) {
+                                    int safe_to_enter = 1;
+
+                                    for(int k = 0; k < num_visual_trains; k++) {
+                                        if(k == i) continue;
+                                        if(visual_trains[k].train_id == -1) continue;
+                                        if(visual_trains[k].using_junction) continue;
+                                        
+                                        //agar dest track pr koi train hai to:
+                                        if(visual_trains[k].current_track == visual_trains[i].dest_track) {
+                                            float gap = fabsf( visual_trains[k].y_pos - junctions[target_junction].y );     //gap bw doosri train and junction
+
+                                            if(gap < SAFE_GAP * 1.5f) {
+                                                safe_to_enter = 0;
+                                                break;
+                                            }
+                                        }
+                                    }
+
+                                    if(safe_to_enter && junctions[target_junction].occupied_by == -1) {
                                         visual_trains[i].using_junction = 1;
                                         visual_trains[i].target_junction = target_junction;
                                         visual_trains[i].junction_progress = 0;
                                         junctions[target_junction].occupied_by = actual_train->id;
-                                        visual_trains[i].junctions_used++;
+
                                     } else {
-                                        visual_trains[i].moving = 0;
-                                        visual_trains[i].y_pos = junctions[target_junction].y - 20;
+                                        visual_trains[i].y_pos = junctions[target_junction].y - 20;     //agar dest track pr koi aur j=hai ya junction occupied hai to junction se thora pehle rok do
                                     }
                                 }
                             }
                         }
                     }
+
                 } else if(visual_trains[i].moving && visual_trains[i].using_junction) {
                     visual_trains[i].junction_progress += 4;
                     
@@ -282,7 +292,7 @@ void* startGUI(void* arg) {
                         int dest_track = visual_trains[i].dest_track;
                         float junction_exit_y = junctions[visual_trains[i].target_junction].y + 5;
                         
-                        int dest_blocked = 0;
+                        int dest_blocked = 0;       //exit point pr koi aur train to qareeb nhi hai
                         for (int k = 0; k < num_visual_trains; k++) {
                             if (k == i) continue;
                             if (visual_trains[k].train_id == -1) continue;
@@ -308,7 +318,6 @@ void* startGUI(void* arg) {
                     }
                 }
                 
-                // Check if reached bottom
                 if(!visual_trains[i].using_junction) {
                     int track_idx = visual_trains[i].current_track - 1;
                     int bottom_y = track_positions[track_idx].y_end;
@@ -319,12 +328,10 @@ void* startGUI(void* arg) {
                         }
                         visual_trains[i].y_pos = track_positions[track_idx].y_start;
                         visual_trains[i].waiting_at_start = 1;
-                        visual_trains[i].moving = 0;
                         visual_trains[i].using_junction = 0;
                     }
                 }
                 
-                // Keep within bounds
                 int track_idx = visual_trains[i].current_track - 1;
                 if(visual_trains[i].y_pos < track_positions[track_idx].y_start) {
                     visual_trains[i].y_pos = track_positions[track_idx].y_start;
@@ -343,7 +350,6 @@ void* startGUI(void* arg) {
         
         pthread_mutex_unlock(&visual_mutex);
         
-        // Drawing section
         BeginDrawing();
         ClearBackground((Color){20, 15, 35, 255});
         
@@ -352,7 +358,6 @@ void* startGUI(void* arg) {
         drawTracks();
         drawJunctions();
         
-        // Draw all trains
         pthread_mutex_lock(&visual_mutex);
         for(int i = 0; i < num_visual_trains; i++) {
             if(visual_trains[i].train_id != -1) {
@@ -388,38 +393,34 @@ void* startGUI(void* arg) {
                 }
                 
                 Color train_color = bright_colors[visual_trains[i].train_id % 6];
-                drawTrain(x, y, visual_trains[i].train_id, visual_trains[i].moving, 
-                         train_color, visual_trains[i].waiting_at_start);
+                drawTrain(x, y, visual_trains[i].train_id, visual_trains[i].moving, train_color, visual_trains[i].waiting_at_start);
                 
-                // Only show status text for the front train (lowest Y position on that track)
-int is_front_train = 1;
-if(!visual_trains[i].moving && visual_trains[i].waiting_at_start) {
-    for(int v = 0; v < num_visual_trains; v++) {
-        if(v != i && 
-           visual_trains[v].current_track == visual_trains[i].current_track && 
-           visual_trains[v].waiting_at_start == 1 &&
-           visual_trains[v].y_pos < visual_trains[i].y_pos) {
-            is_front_train = 0;
-            break;
-        }
-    }
-}
+                int is_front_train = 1;
+                if(!visual_trains[i].moving && visual_trains[i].waiting_at_start) {
+                    for(int v = 0; v < num_visual_trains; v++) {
+                        if(v != i && 
+                        visual_trains[v].current_track == visual_trains[i].current_track && 
+                        visual_trains[v].waiting_at_start == 1 &&
+                        visual_trains[v].y_pos < visual_trains[i].y_pos) {      //agar doosri wali hamari wali se oopar hai to doosri wali front pr hai
+                            is_front_train = 0;
+                            break;
+                        }
+                    }
+                }
 
-char status[50];
-if(visual_trains[i].moving) {
-    sprintf(status, "Train %d", visual_trains[i].train_id);
-    DrawText(status, x-17, y - 35, 12, GREEN);
-} 
-else if(visual_trains[i].waiting_at_start && is_front_train) {
-    sprintf(status, "Train %d", visual_trains[i].train_id);
-    DrawText(status, x - 17, y - 35,12, ORANGE);
-}
-// Skip drawing text for hidden waiting trains (not at front)
-            }
+        char status[50];
+        if(visual_trains[i].moving) {
+            sprintf(status, "Train %d", visual_trains[i].train_id);
+            DrawText(status, x-17, y - 35, 12, GREEN);
+        } 
+        else if(visual_trains[i].waiting_at_start && is_front_train) {
+            sprintf(status, "Train %d", visual_trains[i].train_id);
+            DrawText(status, x - 17, y - 35,12, ORANGE);
+        }
+         }
         }
         pthread_mutex_unlock(&visual_mutex);
         
-        // Schedule panel (simplified)
         DrawRectangle(SCREEN_WIDTH - 280, 10, 270, 130, (Color){30, 25, 45, 230});
         DrawRectangleLines(SCREEN_WIDTH - 280, 10, 270, 130, (Color){150, 130, 200, 255});
         DrawText("SCHEDULE", SCREEN_WIDTH - 280 + 135 - MeasureText("SCHEDULE", 15)/2, 15, 15, (Color){255, 200, 100, 255});
@@ -428,33 +429,32 @@ else if(visual_trains[i].waiting_at_start && is_front_train) {
         int y_offset = 40;
         
         for(int i = 0; i < global_train_count && i < 5; i++) {
-    char schedule_text[100];
-    Color text_color;
-    
-    if(global_trains[i].state == FINISHED) {
-        sprintf(schedule_text, "Train %d: JOURNEY COMPLETE", global_trains[i].id);
-        text_color = GRAY;
-    } 
-    else if(global_trains[i].state == WAITING_SIGNAL || global_trains[i].state == WAITING_TRACK) {
-        sprintf(schedule_text, "Train %d: PLANNING ROUTE", global_trains[i].id);
-        text_color = ORANGE;
-    }
-    else if(global_trains[i].state == MOVING) {
-        sprintf(schedule_text, "Train %d: DEPARTED", global_trains[i].id);
-        text_color = GREEN;
-    }
-    else {
-        sprintf(schedule_text, "Train %d: WAITING", global_trains[i].id);
-        text_color = YELLOW;
-    }
-    
-    int text_width = MeasureText(schedule_text, 10);
-    DrawText(schedule_text, SCREEN_WIDTH - 280 + (270 - text_width)/2, y_offset, 10, text_color);
-    y_offset += 22;
-}
+            char schedule_text[100];
+            Color text_color;
+            
+            if(global_trains[i].state == FINISHED) {
+                sprintf(schedule_text, "Train %d: JOURNEY COMPLETE", global_trains[i].id);
+                text_color = GRAY;
+            } 
+            else if(global_trains[i].state == WAITING_SIGNAL || global_trains[i].state == WAITING_TRACK) {
+                sprintf(schedule_text, "Train %d: PLANNING ROUTE", global_trains[i].id);
+                text_color = ORANGE;
+            }
+            else if(global_trains[i].state == MOVING) {
+                sprintf(schedule_text, "Train %d: DEPARTED", global_trains[i].id);
+                text_color = GREEN;
+            }
+            else {
+                sprintf(schedule_text, "Train %d: WAITING", global_trains[i].id);
+                text_color = YELLOW;
+            }
+            
+            int text_width = MeasureText(schedule_text, 10);
+            DrawText(schedule_text, SCREEN_WIDTH - 280 + (270 - text_width)/2, y_offset, 10, text_color);
+            y_offset += 22;
+        }
         pthread_mutex_unlock(&visual_mutex);
         
-        // Track Status Panel
         DrawRectangle(SCREEN_WIDTH - 280, 150, 270, 150, (Color){30, 25, 45, 230});
         DrawRectangleLines(SCREEN_WIDTH - 280, 150, 270, 150, (Color){150, 130, 200, 255});
         DrawText("TRACK STATUS", SCREEN_WIDTH - 280 + 135 - MeasureText("TRACK STATUS", 11)/2, 165, 11, (Color){255, 200, 100, 255});
@@ -487,7 +487,6 @@ else if(visual_trains[i].waiting_at_start && is_front_train) {
             y_track += 20;
         }
         
-        // Junction Status panel
         DrawRectangle(SCREEN_WIDTH - 280, 310, 270, 170, (Color){30, 25, 45, 230});
         DrawRectangleLines(SCREEN_WIDTH - 280, 310, 270, 170, (Color){150, 130, 200, 255});
         DrawText("JUNCTION STATUS", SCREEN_WIDTH - 280 + 135 - MeasureText("JUNCTION STATUS", 11)/2, 315, 11, (Color){255, 200, 100, 255});
@@ -524,7 +523,6 @@ else if(visual_trains[i].waiting_at_start && is_front_train) {
             y_loop += 18;
         }
         
-// Waiting Times Panel (moved down)
         DrawRectangle(SCREEN_WIDTH - 280, 610, 270, 120, (Color){30, 25, 45, 230});
         DrawRectangleLines(SCREEN_WIDTH - 280, 610, 270, 120, (Color){150, 130, 200, 255});
         DrawText("WAITING TIMES", SCREEN_WIDTH - 280 + 135 - MeasureText("WAITING TIMES", 9)/2, 615, 9, (Color){255, 200, 100, 255});
@@ -580,7 +578,6 @@ else if(visual_trains[i].waiting_at_start && is_front_train) {
             DrawText("No data yet", SCREEN_WIDTH - 280 + 135 - MeasureText("No data yet", 9)/2, y_wait, 9, (Color){255, 200, 100, 255});
         }
         
-  // Total Average Wait Time Panel (moved down)
         DrawRectangle(SCREEN_WIDTH - 280, 740, 270, 55, (Color){30, 25, 45, 230});
         DrawRectangleLines(SCREEN_WIDTH - 280, 740, 270, 55, (Color){150, 130, 200, 255});
         DrawText("TOTAL AVG WAIT TIME", SCREEN_WIDTH - 280 + 135 - MeasureText("TOTAL AVG WAIT TIME", 9)/2, 745, 9, (Color){255, 200, 100, 255});
@@ -595,7 +592,6 @@ else if(visual_trains[i].waiting_at_start && is_front_train) {
             DrawText("Calculating...", SCREEN_WIDTH - 280 + 135 - MeasureText("Calculating...", 11)/2, 768, 11, (Color){255, 200, 100, 255});
         }
         
-        // Legend
         DrawRectangle(10, SCREEN_HEIGHT - 300, 220, 120, (Color){30, 25, 45, 230});
         DrawRectangleLines(10, SCREEN_HEIGHT - 300, 220, 120, (Color){150, 130, 200, 255});
         DrawText("SYMBOLS:", 75, SCREEN_HEIGHT - 320, 15, (Color){255, 200, 100, 255});
