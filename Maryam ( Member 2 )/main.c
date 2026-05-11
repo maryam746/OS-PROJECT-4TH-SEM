@@ -78,7 +78,6 @@ int main() {
         trains[i].track1 = i + 1;
         trains[i].track2 = 0;
         trains[i].reached_bottom = 0;
-        trains[i].waiting_at_bottom = 0;
         trains[i].total_wait_time = 0;
         trains[i].wait_count = 0;
         trains[i].current_wait_start = 0;
