@@ -27,7 +27,6 @@ typedef struct {
     time_t finish_time;
     char current_route_str[64];
     volatile int reached_bottom;
-    volatile int waiting_at_bottom;
     double total_wait_time;
     int wait_count;
     time_t current_wait_start;
