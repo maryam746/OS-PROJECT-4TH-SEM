@@ -6,7 +6,7 @@
 
 // Constants
 #define SCREEN_WIDTH 1600
-#define SCREEN_HEIGHT 1000
+#define SCREEN_HEIGHT 850
 #define TRAIN_WIDTH 35
 #define TRAIN_HEIGHT 50
 #define TOTAL_TRACKS 5
