@@ -574,7 +574,7 @@ void* startGUI(void* arg) {
             }
         }
         
-        if(y_wait == 625) {
+        if(y_wait == 635) {
             DrawText("No data yet", SCREEN_WIDTH - 280 + 135 - MeasureText("No data yet", 9)/2, y_wait, 9, (Color){255, 200, 100, 255});
         }
         
