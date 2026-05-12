@@ -4,7 +4,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <string.h>
-#include "signal.h"
+#include "signals.h"
 #include "track.h"
 #include "train.h"
 
