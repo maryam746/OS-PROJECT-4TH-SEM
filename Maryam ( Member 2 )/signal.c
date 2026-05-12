@@ -1,4 +1,4 @@
-#include "signals.h"
+#include "signal.h"
 
 sem_t signalSemaphore;
 
