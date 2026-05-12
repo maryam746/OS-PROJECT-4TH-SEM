@@ -5,7 +5,7 @@
 #include <string.h>
 #include <math.h>
 #include <stdlib.h>
-#include "signal.h"
+#include "signals.h"
 
 //train wali cheezein
 extern Train* global_trains;
@@ -609,7 +609,7 @@ void* startGUI(void* arg) {
         DrawText("Waiting at Station", 60, SCREEN_HEIGHT - 205, 12, (Color){220, 220, 255, 255});
         
         EndDrawing();
-        usleep(50000);
+        usleep(16000);
     }
     
 
