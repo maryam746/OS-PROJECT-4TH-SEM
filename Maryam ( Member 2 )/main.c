@@ -4,7 +4,6 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <signal.h>
 #include "track.h"
 #include "signal.h"
 #include "train.h"
@@ -32,13 +31,8 @@ void close_logging() {
     }
 }
 
-void handle_signal(int sig) {
-    printf("\n\nShutting down...\n");
-    simulation_running = 0;
-}
 
 int main() {
-    signal(SIGINT, handle_signal);
     srand(time(NULL));
     
     printf("\n========================================\n");
